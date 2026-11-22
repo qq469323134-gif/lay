@@ -1,0 +1,34 @@
+name: Build LayAndRelax ASI
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile x64 DLL (MSVC)
+        shell: cmd
+        run: |
+          for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VSPATH=%%i"
+          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat"
+          cl.exe /O2 /MT /EHsc /D_WIN32_WINNT=0x0601 /DWIN32_LEAN_AND_MEAN /DNOMINMAX ^
+            LayAndRelax.cpp /link /DLL /OUT:LayAndRelax.dll kernel32.lib user32.lib
+
+      - name: Rename to ASI
+        shell: pwsh
+        run: |
+          Move-Item LayAndRelax.dll LayAndRelax.asi -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LayAndRelax-asi
+          path: |
+            LayAndRelax.asi
+            LayAndRelax.ini

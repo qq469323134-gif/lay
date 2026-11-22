@@ -1,0 +1,36 @@
+name: Build LayAndRelax ASI
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Compile x64 DLL
+        shell: pwsh
+        run: |
+          # 假设 SDK 头文件/库放在仓库 sdk/ 目录: sdk/scripthookv.h, sdk/scripthookv.lib
+          cl.exe /O2 /MT /EHsc /D_WIN32_WINNT=0x0601 /DWIN32_LEAN_AND_MEAN /DNOMINMAX `
+            /I sdk `
+            LayAndRelax.cpp /link /DLL /OUT:LayAndRelax.dll sdk/scripthookv.lib user32.lib
+
+      - name: Rename to ASI
+        run: |
+          Move-Item LayAndRelax.dll LayAndRelax.asi -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LayAndRelax-asi
+          path: |
+            LayAndRelax.asi
+            LayAndRelax.ini
